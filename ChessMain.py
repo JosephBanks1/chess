@@ -103,4 +103,5 @@ def draw_pieces(screen, board):
 if __name__ == "__main__":
     main()
 
-
+    def test(self):
+        pass
