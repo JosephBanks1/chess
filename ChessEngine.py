@@ -1,5 +1,7 @@
 # this class is responsible for storing all the info about the current state of a chess game. It will also be resposible for determining the valid moves at the current state. It will also keep a move log
+from os import truncate
 from tabnanny import check
+from turtle import back
 from numpy import true_divide
 
 
@@ -138,58 +140,52 @@ class GameState():
     def get_pawn_moves(self, r, c, moves):
         piece_pinned = False
         pin_direction = ()
-        for i in range(len(self.pins)-1, -1):
+        for i in range(len(self.pins)-1, -1, -1):
             if self.pins[i][0] == r and self.pins[i][1] == c:
                 piece_pinned = True 
                 pin_direction = (self.pins[i][2], self.pins[i][3])
                 self.pins.remove(self.pins[i])
                 break
-
-        #white pawn moves
-        if self.white_to_move: 
-            if self.board[r-1][c] == "--": #1 square move
-                if not piece_pinned or pin_direction == (-1, 0):
-                    moves.append(Move((r, c), (r-1, c), self.board))
-                    if r == 6 and self.board[r-2][c] == "--": #2 square pawn advance
-                        moves.append(Move((r,c), (r-2, c), self.board))
         
-        #white pawn captures
-        if c-1 >= 0: #captures to the left
-            if self.board[r-1][c-1][0] == 'b': #enemy piece to capture
-                if not piece_pinned or pin_direction == (-1, -1):
-                    moves.append(Move((r, c), (r-1, c-1), self.board))
-                elif (r-1, c-1) == self.enpassant_possible:
-                    moves.append(Move((r, c), (r-1, c-1), self.board, is_enpassant_move = True))
-        if c+1 <= 7: #captures to the right 
-            if self.board[r-1][c+1][0] == 'b':
-                if not piece_pinned or pin_direction == (-1, 1):
-                    moves.append(Move((r, c), (r-1, c+1), self.board))
-                elif (r-1, c+1) == self.enpassant_possible:
-                    moves.append(Move((r, c), (r-1, c+1), self.board, is_enpassant_move = True))
+        if self.white_to_move:
+            move_amount = -1
+            start_row = 6
+            back_row = 0
+            enemy_color = 'b'
+        else:
+            move_amount = 1
+            start_row = 1
+            back_row = 7
+            enemy_color = 'w'
+        pawn_promotion = False
 
-        #black pawn moves            
-        else: 
-            if self.board[r+1][c] == "--": #1 square pawn advance
-                if not piece_pinned or pin_direction == (1, -1):
-                    moves.append(Move((r, c), (r+1, c), self.board))
-                if r == 1 and self.board[r+2][c] == "--": #2 square pawn advance
-                    moves.append(Move((r,c), (r+2, c), self.board))
+        if self.board[r + move_amount][c] == "--": #1 square move
+            if not piece_pinned or pin_direction == (move_amount, 0):
+                if r + move_amount == back_row: #if piece gets to back rank then it is a pawn promotion
+                    pawn_promotion = True
+                moves.append(Move((r, c), (r+move_amount, c), self.board, pawn_promotion = pawn_promotion))
+                if r == start_row and self.board[r+2*move_amount][c] == "--": #2 square moves
+                    moves.append(Move((r,c), (r+2*move_amount, c), self.board))
 
         #captures
         if c-1 >= 0: #captures to the left
-            if self.board[r+1][c-1][0] == 'w':
-                if not piece_pinned or pin_direction == (1, 1):
-                    moves.append(Move((r, c), (r+1, c-1), self.board))
-                elif (r+1, c-1) == self.enpassant_possible:
-                    moves.append(Move((r, c), (r+1, c-1), self.board, is_enpassant_move = True))
+            if not piece_pinned or pin_direction == (move_amount, -1):            
+                if self.board[r + move_amount][c - 1][0] == enemy_color:
+                    if r + move_amount == back_row: # piece gets to bank rank them it is a pawn promotion
+                        pawn_promotion = True
+                    moves.append(Move((r, c), (r+move_amount, c-1), self.board, pawn_promotion = pawn_promotion))
+        
+                if (r+move_amount, c - 1) == self.enpassant_possible:
+                    moves.append(Move((r, c), (r+move_amount, c-1), self.board, enpassant = True))
         if c+1 <= 7: #captures to the right 
-            if self.board[r+1][c+1][0] == 'w':
-                moves.append(Move((r, c), (r+1, c+1), self.board))
-            elif (r+1, c+1) == self.enpassant_possible:
-                    moves.append(Move((r, c), (r+1, c+1), self.board, is_enpassant_move = True))
-
-    #add pawn promotions later
-
+            if not piece_pinned or pin_direction == (move_amount, 1):
+                if self.board[r+move_amount][c + 1][0] == enemy_color:
+                    if r + move_amount == back_row: #if piece gets to bank rank theen its a pawn promotion
+                        pawn_promotion = True
+                    moves.append(Move((r, c), (r+move_amount, c+1), self.board, pawn_promotion = pawn_promotion))
+                if (r+move_amount, c+1) == self.enpassant_possible:
+                    moves.append(Move((r, c), (r+move_amount, c+1), self.board, enpassant_move = True))
+        
     def square_under_attack(self, r, c):
         self.white_to_move = not self.white_to_move #switch to oppenets turn
         opp_moves = self.get_all_possible_moves()
@@ -198,7 +194,6 @@ class GameState():
             if move.end_row == r and move.end_col == c: #square is under attack
                 return True
         return False
-
 
     #get all the pawn moves for the rook located at row, col, and add these moves to the list
     def get_rook_moves(self, r, c, moves):
