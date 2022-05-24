@@ -53,11 +53,14 @@ def main():
                 if len(player_clicks) == 2: #after 2nd click
                     move = ChessEngine.move(player_clicks[0], player_clicks[1], gs.board)
                     print(move.get_chess_notations())
-                    if move in valid_moves:
-                        gs.make_move(move)
-                        move_made = True
-                    sq_selected = ()#reset user clicks
-                    player_clicks = []
+                    for i in range(len(valid_moves)):
+                        if move in valid_moves:
+                            gs.make_move(valid_moves[i])
+                            move_made = True
+                            sq_selected = ()#reset user clicks
+                            player_clicks = []
+                    if not move_made:
+                        player_clicks = [sq_selected]
             #key handlers
             elif e.type == p.KEYDOWN:
                 if e.key == p.K_z: #undo when z is pressed
@@ -103,5 +106,3 @@ def draw_pieces(screen, board):
 if __name__ == "__main__":
     main()
 
-    def test(self):
-        pass
