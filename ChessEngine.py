@@ -216,7 +216,7 @@ class GameState():
             if not piece_pinned or pin_direction == (move_amount, 0):
                 if r + move_amount == back_row: #if piece gets to back rank then it is a pawn promotion
                     pawn_promotion = True
-                moves.append(Move((r, c), (r+ move_amount, c), self.board, pawn_promotion = pawn_promotion))
+                moves.append(Move((r, c), (r+ move_amount, c), self.board, pawn_promotion))
                 if r == start_row and self.board[r+2 * move_amount][c] == "--": #2 square moves
                     moves.append(Move((r,c), (r+2 * move_amount, c), self.board))
 
@@ -363,7 +363,7 @@ class GameState():
 
 
     #generate all valid castle moves for the king at (r, c) and add them to the list of moves
-    def get_castle_moves(self, r, c, moves):
+    def get_castle_moves(self, r, c, moves, ally_color):
         if self.square_under_attack(r, c):
             return #cant caslt while we are in check
         if (self.white_to_move and self.current_castling_right.wks) or (not self.white_to_move and self.current_castling_right.bks):
