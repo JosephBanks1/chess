@@ -1,5 +1,6 @@
 # this is our driver file. It will be responsible for handling user input and displaying the current GameState object.
 import os
+# from tkinter.tix import IMAGE
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 import pygame as p
 import ChessEngine
@@ -9,17 +10,17 @@ width = height = 512  #400 is another option, any bigger than 512 quality starts
 dimension = 8 #dimension of a chess board are 8x8
 sq_size = height // dimension 
 max_fps = 15 #for animations later on
-images = {}
+IMAGE = {}
 
-#we load images only once because its a very heavy operation. if we choose to load more that that its going to lag for every move as we increase notation.
+#we load IMAGE only once because its a very heavy operation. if we choose to load more that that its going to lag for every move as we increase notation.
 '''
-initialize a global dict of images. This will be called exactly once in the main.
+initialize a global dict of IMAGE. This will be called exactly once in the main.
 '''
-def load_images():
+def load_IMAGE():
     pieces = ['wp', 'wR', 'wN', 'wB', 'wK', 'wQ', 'bP', 'bR', 'bN', 'bB', 'bK', 'bQ' ]
     for piece in pieces:
-        images[piece] = p.transform.scale.image.load('images/' + piece + '.png'), (sq_size, sq_size)
-    #note: we can acess an image by saying 'images[' ']   -insert whatever piece in empty str-
+        IMAGE[piece] = p.transform.scale.image.load('IMAGE/' + piece + '.png'), (sq_size, sq_size)
+    #note: we can acess an image by saying 'IMAGE[' ']   -insert whatever piece in empty str-
 #the main driver for our code. This will handle user input and updating the graphics
 
 def main():
@@ -31,7 +32,7 @@ def main():
     valid_moves = gs.get_valid_moves()
     move_made = False #flag varible for when a move is made
     
-    load_images()
+    load_IMAGE()
     running = True
     sq_selected = () #no square is selected, keep track of the last click of the user(tuple:(row,col))
     player_clicks = [] #keep track of player clicks (tow tuples: [(6, 4), (4, 4)])
@@ -68,6 +69,7 @@ def main():
                     move_made = True
                     
         if move_made:
+            animate_move(gs.moveLog[-1], screen, gs.board,clock)
             valid_moves = gs.get_valid_moves()
             move_made = False
 
@@ -76,16 +78,36 @@ def main():
         clock.tick(max_fps)
         p.display.flip()
 
+
+#highlight square selected and moves for pieces selected
+def highlight_squares(screen, gs, valid_moves, sq_selected):
+    if sq_selected != ():
+        r, c = sq_selected
+        if gs.board[r][c][0] == ('w' if gs.white_to_move else 'b'): #sqselected is a piece that can be moved
+            #highlight selected square
+            s= p.Surface((sq_size, sq_size))
+            s.set_alpha(100) #transperancy value -> 0 trans; 255 opaque
+            s.fill(p.Color('blue'))
+            screen.blit(s, (c*sq_size, r*sq_size))
+            #highlight moves from that square
+            s.fill(p.Color('yellow'))
+            for move in valid_moves:
+                if move.start_row == r and move.start_col == c:
+                    screen.blit(s, (move.end_col*sq_size, move.endRow*sq_size))
+
+
+
 #reponsible for all the graphics within a current game state
 
-def draw_GameState(screen, gs):
+def draw_GameState(screen, gs, valid_moves, sq_selected):
     draw_board(screen) #draws squares on the board
-    #allows adding in piece highlighting or move suggestion (later)
+    highlight_squares(screen, gs, valid_moves, sq_selected)
     draw_pieces(screen, gs.board) #draws pieces on top of those squares
 
 
 #this draws the squares on the board. can be addapted for color. board must be done first. Top left square is always light 
 def draw_board(screen):
+    global colors
     colors = [p.Color("white"), p.Color('grey')]
     for r in range(dimension):
         for c in range(dimension):
@@ -99,7 +121,33 @@ def draw_pieces(screen, board):
         for c in range(dimension):
             piece = board[r][c]
             if piece != '--':
-                screen.blit(images[piece], p.Rect(c*sq_size, r*sq_size, sq_size, sq_size))
+                screen.blit(IMAGE[piece], p.Rect(c*sq_size, r*sq_size, sq_size, sq_size))
+
+#aninmating a move
+
+def animate_move(move, screen, board, clock):
+    global colors
+    coords = [] #list of coords that the animation will move through
+    dR = move.end_row - move.start_row
+    dC = move.end_col - move.start_col
+    frames_per_square = 10 #frames to move one square
+    frame_count = (abs(dR) + abs(dC)) * frames_per_square
+    for frame in range(frame_count + 1):
+        r, c = (move.start_row + dR*frame/frame_count, move.start_col + dC*frame/frame_count)
+        draw_board(screen)
+        draw_pieces(screen, board)
+        #erase the piece moved from its ending square
+        color = colors[(move.end_row + move.end_col) % 2]
+        end_square = p.Rect(move.end_col*sq_size, move.end_row*sq_size, sq_size, sq_size)
+        p.draw.rect(screen, color, end_square)
+        #draw captured piece onto rectangle
+        if move.piece_captured != '--':
+            screen.blit(IMAGE[move.piece_captured], end_square)
+        #draw moving piece
+        screen.blit(IMAGE[move.piece_moved], p.Rect(c*sq_size, r*sq_size, sq_size, sq_size))
+        p.display.flip()
+        clock.tick(60) 
+    
 
 
 
