@@ -1,9 +1,11 @@
 # this is our driver file. It will be responsible for handling user input and displaying the current GameState object.
+import sys, threading
+sys.setrecursionlimit(10**7) # max depth of recursion
+threading.stack_size(2**27)  # new thread will get stack of such size
 import os
-# from tkinter.tix import IMAGE
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 import pygame as p
-import ChessEngine
+import ChessEngine, SmartMoveFinder
 
 
 width = height = 512  #400 is another option, any bigger than 512 quality starts to diminish
@@ -39,14 +41,16 @@ def main():
     sq_selected = () #no square is selected, keep track of the last click of the user(tuple:(row,col))
     player_clicks = [] #keep track of player clicks (tow tuples: [(6, 4), (4, 4)])
     gameover = False
-
+    player_one = True #if a human is playing white, then this will be true. if an AI is playing , then false
+    player_two = False #same as above but for black 
     while running:
+        human_turn = (gs.white_to_move and player_one) or (not gs.white_to_move and player_two)
         for e in p.event.get():
             if e.type == p.QUIT:
                 running = False
             #mouse handler
             elif e.type == p.mousebuttondown:
-                if not gameover:
+                if not gameover and human_turn:
                     location = p.mouse.get_pos() #(x, y) location of mouse
                     col = location[0]//sq_size
                     row = location[1]//sq_size
@@ -82,7 +86,16 @@ def main():
                     move_made = False
                     animate = False
 
-                    
+        #AI move finder 
+        if not gameover and not human_turn:
+            AIMove = SmartMoveFinder.find_best_move(gs, valid_moves)
+            if AIMove is None:
+                AIMove = SmartMoveFinder.findRandomMove(valid_moves)
+
+            gs.make_move(AIMove)
+            move_made = True
+            animate = True
+
         if move_made:
             if animate:
               animate_move(gs.moveLog[-1], screen, gs.board,clock)
